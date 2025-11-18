@@ -19,7 +19,10 @@ See @README.md for information.
 
 ## Resources
 
-- [Python Limited API](https://docs.python.org/3/c-api/stable.html)
+- [Python C API](https://docs.python.org/3/c-api/extension-modules.html)
+- [Python C API stability](https://docs.python.org/3/c-api/stable.html)
+- [Zig language reference](https://ziglang.org/documentation/master/)
+- [Zig standard library](https://ziglang.org/documentation/master/std/)
 - [Zig Build System](https://ziglang.org/learn/build-system/)
 - [nanobind (inspiration)](https://github.com/wjakob/nanobind)
 - [PEP 517 (Build Backend)](https://peps.python.org/pep-0517/)

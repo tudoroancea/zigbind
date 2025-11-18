@@ -13,6 +13,7 @@ This library aims at providing a way to create Python bindings to Zig code with:
 
 ```bash
 # build python bindings from zig code
+cd examples/hellozig
 zig build -Dpython_prefix=$(uv run --no-project python -c 'import sys; print(sys.base_prefix)')
 # call the bindings from a python script
 PYTHONPATH=./zig-out/lib uv run --no-project demo.py
