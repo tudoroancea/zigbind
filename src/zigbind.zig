@@ -25,13 +25,7 @@ var methods = [_]PyMethodDef{
         .ml_meth = hello_impl,
         .ml_flags = py.METH_NOARGS,
         .ml_doc = "Return a greeting from Zig",
-    },
-    .{
-        .ml_name = null,
-        .ml_meth = null,
-        .ml_flags = 0,
-        .ml_doc = null,
-    }, // Sentinel
+    }
 };
 
 // Module definition - use std.mem.zeroInit to properly initialize all fields to zero
