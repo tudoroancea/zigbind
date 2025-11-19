@@ -29,24 +29,24 @@ fn divide(a: f64, b: f64) !f64 {
 }
 
 export fn PyInit_mymodule() callconv(.c) ?*zb.PyObject {
-    const module = zb.createModule(.{
+    var module = zb.Module.init(.{
         .name = "mymodule",
         .doc = "My awesome Zig module",
     }) catch return null;
 
-    zb.defineFunction(module, .{
+    module.defineFunction(.{
         .name = "add",
         .func = add,
         .doc = "Add two integers",
     }) catch return null;
 
-    zb.defineFunction(module, .{
+    module.defineFunction(.{
         .name = "divide",
         .func = divide,
         .doc = "Divide two floats (raises ValueError if divisor is zero)",
     }) catch return null;
 
-    return module;
+    return module.pyobject();
 }
 ```
 

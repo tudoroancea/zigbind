@@ -37,46 +37,46 @@ fn is_positive(x: i32) bool {
 }
 
 export fn PyInit_hellozig() callconv(.c) ?*zb.PyObject {
-    const module = zb.createModule(.{
+    var module = zb.Module.init(.{
         .name = "hellozig",
         .doc = "Example Zig extension module with ergonomic API",
     }) catch return null;
 
-    zb.defineFunction(module, .{
+    module.defineFunction(.{
         .name = "hello",
         .func = hello,
         .doc = "Return a greeting from Zig",
     }) catch return null;
 
-    zb.defineFunction(module, .{
+    module.defineFunction(.{
         .name = "greet",
         .func = greet,
         .doc = "Echo back the name (demo of string parameter)",
     }) catch return null;
 
-    zb.defineFunction(module, .{
+    module.defineFunction(.{
         .name = "add",
         .func = add,
         .doc = "Add two integers",
     }) catch return null;
 
-    zb.defineFunction(module, .{
+    module.defineFunction(.{
         .name = "multiply",
         .func = multiply,
         .doc = "Multiply two floats",
     }) catch return null;
 
-    zb.defineFunction(module, .{
+    module.defineFunction(.{
         .name = "divide",
         .func = divide,
         .doc = "Divide two floats (returns None if divisor is zero)",
     }) catch return null;
 
-    zb.defineFunction(module, .{
+    module.defineFunction(.{
         .name = "is_positive",
         .func = is_positive,
         .doc = "Check if a number is positive",
     }) catch return null;
 
-    return module;
+    return module.pyobject();
 }
