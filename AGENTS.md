@@ -26,6 +26,22 @@ See @README.md for information.
 - **Prefer ergonomics over compatibility**: If a better API design is found, implement it immediately
 - **Document current API only**: Remove legacy/deprecated APIs entirely rather than maintaining them
 
+## Testing
+
+Tests are organized by feature with their own Zig modules compiled together. All tests include a build step (`test_00_build`) that automatically compiles the Zig modules on first run.
+
+```bash
+cd tests
+
+# Run all tests (builds all test modules automatically)
+uv run pytest . -v
+
+# Run specific test file
+uv run pytest test_functions.py -v      # Basic function types
+uv run pytest test_containers.py -v     # List container support
+uv run pytest test_memory_leak.py -v    # Memory leak stress tests
+```
+
 ## Resources
 
 - [Python C API](https://docs.python.org/3/c-api/extension-modules.html)
