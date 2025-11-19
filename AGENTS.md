@@ -17,6 +17,15 @@ See @README.md for information.
 - **ruff**: Python linting and formatting (replaces black, isort, flake8)
 - **zig build**: Native build system (no external build tools needed)
 
+## API Philosophy
+
+**IMPORTANT**: This project is in early development. The API is actively being defined and refined.
+
+- **No backward compatibility guarantees**: Breaking changes are expected and acceptable
+- **Examples must stay current**: Always update all examples when changing the API
+- **Prefer ergonomics over compatibility**: If a better API design is found, implement it immediately
+- **Document current API only**: Remove legacy/deprecated APIs entirely rather than maintaining them
+
 ## Resources
 
 - [Python C API](https://docs.python.org/3/c-api/extension-modules.html)
