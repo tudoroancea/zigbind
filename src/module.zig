@@ -85,6 +85,8 @@ pub const Module = struct {
                     errors.setException(err);
                     return null;
                 };
+                // Defer cleanup of any allocated slices in zig_args
+                defer cleanupArgs(func, zig_args);
 
                 // Call the Zig function and convert result
                 const FType = @TypeOf(func);
@@ -152,6 +154,22 @@ pub const Module = struct {
             fn convertResult(result: anytype) !*py.PyObject {
                 const ResultType = @TypeOf(result);
                 return try type_caster.TypeCaster(ResultType).toPython(result);
+            }
+
+            fn cleanupArgs(comptime f: anytype, args: anytype) void {
+                // Clean up any dynamically allocated slices in the arguments
+                // This is important for memory management: slices allocated by
+                // fromPythonList must be freed after the function returns
+                const FType = @TypeOf(f);
+                const f_info = @typeInfo(FType).@"fn";
+
+                inline for (f_info.params, 0..) |param, i| {
+                    const ParamType = param.type orelse {
+                        @compileError("Cannot infer parameter type");
+                    };
+                    // Free if this parameter is a slice
+                    type_caster.freeIfSlice(ParamType, args[i]);
+                }
             }
 
             fn ArgsType(comptime f: anytype) type {

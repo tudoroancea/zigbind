@@ -6,7 +6,7 @@ High-performance Python bindings for Zig with an ergonomic, type-safe API.
 
 - **Zero-overhead bindings**: Compile-time code generation, no runtime overhead
 - **Automatic type conversion**: Seamless conversion between Zig and Python types
-- **Ergonomic API**: No boilerplate - just write Zig functions and expose them
+- **Ergonomic API**: Minimal boilerplate - just write Zig functions and expose them
 - **Type-safe**: Compile-time type checking ensures correctness
 - **Error handling**: Automatic Zig error → Python exception mapping
 - **Native build system**: Uses Zig's build system, no CMake/Bazel needed
@@ -51,55 +51,97 @@ That's it! No manual `PyMethodDef` arrays, no struct initialization, no type con
 | `f32`, `f64` | `float` | Accepts Python ints too |
 | `bool` | `bool` | Native boolean conversion |
 | `[]const u8` | `str` | UTF-8 strings |
+| `[]T` (slices) | `list[T]` | Dynamic lists with proper memory management |
 | `?T` | `T \| None` | Optional types |
 | `!T` | Exception or `T` | Error unions |
 | `void` | `None` | No return value |
 
-## Installation & Usage
-
-### Prerequisites
+## Prerequisites
 
 - Zig 0.15.x
 - Python 3.12+
-- `uv` (recommended) or `pip`
 
-### Building an Extension
+## Using Zigbind in Your Project
 
-```bash
-# Clone zigbind (or add as dependency in build.zig.zon)
-git clone https://github.com/yourusername/zigbind.git
-
-# Create your extension (see examples/hellozig)
-cd examples/hellozig
-
-# Build
-zig build -Dpython_prefix=$(uv run --no-project python -c 'import sys; print(sys.base_prefix)')
-
-# Run
-PYTHONPATH=./zig-out/lib uv run --no-project python -c "import hellozig; print(hellozig.add(5, 3))"
-# Output: 8
-```
-
-### Running Tests
+Add zigbind as a dependency using `zig fetch`:
 
 ```bash
-cd zigbind
-uv run pytest tests/ -v
+zig fetch --save https://github.com/tudoroancea/zigbind/archive/refs/heads/main.tar.gz
 ```
 
-All 22 tests should pass!
+For local development, you can also use a relative path in `build.zig.zon`:
+
+```zon
+.dependencies = .{
+    .zigbind = .{
+        .path = "../zigbind",
+    },
+}
+```
+
+Then import and use in `build.zig`:
+
+```zig
+const zb = b.dependency("zigbind", .{});
+const mymodule = b.addSharedLibrary(.{
+    .name = "mymodule",
+    .root_source_file = b.path("src/mymodule.zig"),
+    .target = target,
+    .optimize = optimize,
+});
+mymodule.root_module.addImport("zigbind", zb.module("zigbind"));
+```
+
+## Examples
+
+We provide working examples demonstrating different features:
+
+### hellozig
+Basic "Hello, World!" style example showing minimal setup.
+
+### types_demo
+Comprehensive demo covering:
+- Integer, float, and boolean types
+- String handling (UTF-8)
+- Error handling (Zig errors → Python exceptions)
+- Basic function binding patterns
+
+To run an example:
+
+```bash
+cd examples/types_demo
+zig build -Dpython_prefix=$(python3 -c "import sys; print(sys.base_prefix)")
+PYTHONPATH=./zig-out/lib python3 << 'EOF'
+import types_demo
+print(types_demo.add(5, 3))              # 8
+print(types_demo.multiply(2.5, 4.0))     # 10.0
+print(types_demo.is_positive(-5))        # False
+print(types_demo.greet("Zig"))           # Zig
+try:
+    types_demo.divide(10.0, 0.0)
+except ValueError:
+    print("Division by zero caught")
+EOF
+```
 
 ## Current Status
 
-**✅ Iteration 1 Complete**: Ergonomic function bindings with automatic type conversion
+**✅ Iteration 2 In Progress**: Container type support
 
+### Completed
 - [x] Function bindings with automatic type inference
-- [x] Basic type conversion (int, float, bool, string, optional)
+- [x] Basic type conversion (int, float, bool, string, optional, error unions)
 - [x] Error handling (Zig errors → Python exceptions)
-- [x] Comprehensive test suite
-- [ ] Class/struct bindings (Iteration 2)
+- [x] **List support** (`[]T ↔ list[T]`) with proper memory management
+- [x] Memory leak fixes with pytest-dependency integration
+- [x] Comprehensive test suite (57 tests)
+
+### Planned
+- [ ] Tuple support (`{T1, T2, ...} ↔ tuple[T1, T2, ...]`)
+- [ ] Dict support (`HashMap(K, V) ↔ dict[K, V]`)
+- [ ] Set support (`HashSet(T) ↔ set[T]`)
+- [ ] Class/struct bindings
 - [ ] Stable ABI configuration
-- [ ] Lists, tuples, dicts
 - [ ] NumPy interop
 - [ ] Build backend for pip install
 
