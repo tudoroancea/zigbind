@@ -1,0 +1,18 @@
+.{
+    .name = .tests,
+    .version = "0.0.0",
+    .fingerprint = 0x1260fc5ebd560c17,
+    .minimum_zig_version = "0.15.2",
+    .dependencies = .{
+        .zigbind = .{
+            .path = "..",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "test_functions.zig",
+        "test_containers.zig",
+        "test_memory_leak.zig",
+    },
+}

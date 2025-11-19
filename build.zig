@@ -45,5 +45,7 @@ pub fn build(b: *std.Build) void {
     const python_version = found_version.?;
     zigbind.addIncludePath(.{ .cwd_relative = b.fmt("{s}/include/{s}", .{ python_prefix, python_version }) });
     zigbind.addLibraryPath(.{ .cwd_relative = b.fmt("{s}/lib", .{python_prefix}) });
-    zigbind.linkSystemLibrary(python_version, .{});
+    // Extract version like "3.12" from "python3.12"
+    const lib_name = b.fmt("python{s}", .{python_version[6..]});
+    zigbind.linkSystemLibrary(lib_name, .{});
 }
