@@ -13,8 +13,13 @@ pub fn TypeCaster(comptime T: type) type {
                 .float => fromPythonFloat(T, obj),
                 .bool => fromPythonBool(obj),
                 .pointer => |ptr| {
-                    if (ptr.size == .slice and ptr.child == u8) {
+                    // Special handling: []const u8 is a string, not a list
+                    if (ptr.size == .slice and ptr.child == u8 and ptr.is_const) {
                         return fromPythonString(obj);
+                    }
+                    // General list handling: []T where T is any type
+                    if (ptr.size == .slice) {
+                        return fromPythonList(T, obj);
                     }
                     @compileError("Unsupported pointer type: " ++ @typeName(T));
                 },
@@ -36,8 +41,13 @@ pub fn TypeCaster(comptime T: type) type {
                 .float => toPythonFloat(value),
                 .bool => toPythonBool(value),
                 .pointer => |ptr| {
-                    if (ptr.size == .slice and ptr.child == u8) {
+                    // Special handling: []const u8 is a string, not a list
+                    if (ptr.size == .slice and ptr.child == u8 and ptr.is_const) {
                         return toPythonString(value);
+                    }
+                    // General list handling: []T where T is any type
+                    if (ptr.size == .slice) {
+                        return toPythonList(T, value);
                     }
                     @compileError("Unsupported pointer type: " ++ @typeName(T));
                 },
@@ -155,6 +165,91 @@ fn toPythonString(str: []const u8) !*py.PyObject {
 // Helper to check if value is None
 pub fn isNone(obj: *py.PyObject) bool {
     return py.Py_IsNone(obj) != 0;
+}
+
+// List conversion ([]T ↔ list[T])
+//
+// Memory management:
+// - fromPythonList allocates a Zig slice with std.heap.c_allocator
+// - Caller is responsible for freeing the slice when done
+// - toPythonList creates a new PyList with owned references
+fn fromPythonList(comptime ListType: type, obj: *py.PyObject) !ListType {
+    // ListType is []T or []const T
+    const ptrinfo = @typeInfo(ListType).pointer;
+    const ElementType = ptrinfo.child;
+    const ElementCaster = TypeCaster(ElementType);
+
+    // Verify we have a sequence
+    if (py.PySequence_Check(obj) == 0) {
+        return errors.Error.TypeError;
+    }
+
+    // Get sequence length
+    // PySequence_Length can return -1 on error
+    const seq_len = py.PySequence_Length(obj);
+    if (seq_len < 0) {
+        return errors.Error.RuntimeError;
+    }
+
+    const len = @as(usize, @intCast(seq_len));
+
+    // Allocate slice for the elements
+    // Using c_allocator since this interops with Python memory
+    const allocator = std.heap.c_allocator;
+    const slice = try allocator.alloc(ElementType, len);
+    errdefer allocator.free(slice); // Free slice on error
+
+    // Convert each element
+    // PySequence_GetItem returns a NEW reference that we must decref
+    for (0..len) |i| {
+        const py_item = py.PySequence_GetItem(obj, @intCast(i));
+        if (py_item == null) {
+            // Error occurred; clean up and propagate
+            return errors.Error.RuntimeError;
+        }
+        // PySequence_GetItem returned a NEW reference, so we must decref it
+        defer py.Py_DecRef(py_item.?);
+
+        // Convert the Python object to Zig type
+        slice[i] = try ElementCaster.fromPython(py_item.?);
+    }
+
+    return slice;
+}
+
+fn toPythonList(comptime T: type, value: anytype) !*py.PyObject {
+    // T is []const ElementType; value is []const ElementType
+    const ptrinfo = @typeInfo(T).pointer;
+    const ElementType = ptrinfo.child;
+    const ElementCaster = TypeCaster(ElementType);
+    const len = value.len;
+
+    // Create a new Python list
+    const py_list = py.PyList_New(@intCast(len));
+    if (py_list == null) {
+        return errors.Error.MemoryError;
+    }
+    // On error, we need to decref the list
+    errdefer py.Py_DecRef(py_list.?);
+
+    // Fill the list with converted elements
+    for (value, 0..) |elem, i| {
+        // Convert Zig element to Python object
+        const py_elem = try ElementCaster.toPython(elem);
+        // py_elem is a NEW reference (ownership passed to us)
+
+        // PyList_SetItem STEALS the reference to py_elem
+        // If it fails, we must decref py_elem ourselves
+        const set_result = py.PyList_SetItem(py_list.?, @intCast(i), py_elem);
+        if (set_result < 0) {
+            // PyList_SetItem failed and did NOT steal the reference
+            py.Py_DecRef(py_elem);
+            return errors.Error.RuntimeError;
+        }
+        // PyList_SetItem succeeded and stole the reference, don't decref py_elem
+    }
+
+    return py_list.?;
 }
 
 // Reference counting helpers
