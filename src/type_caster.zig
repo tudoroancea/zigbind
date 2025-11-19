@@ -218,11 +218,13 @@ fn fromPythonList(comptime ListType: type, obj: *py.PyObject) !ListType {
 }
 
 fn toPythonList(comptime T: type, value: anytype) !*py.PyObject {
-    // T is []const ElementType; value is []const ElementType
+    // T is []const ElementType or []ElementType
+    // value is a slice (might be allocated with c_allocator or owned elsewhere)
     const ptrinfo = @typeInfo(T).pointer;
     const ElementType = ptrinfo.child;
     const ElementCaster = TypeCaster(ElementType);
     const len = value.len;
+    const allocator = std.heap.c_allocator;
 
     // Create a new Python list
     const py_list = py.PyList_New(@intCast(len));
@@ -249,7 +251,41 @@ fn toPythonList(comptime T: type, value: anytype) !*py.PyObject {
         // PyList_SetItem succeeded and stole the reference, don't decref py_elem
     }
 
+    // Important: Free the Zig slice if it was allocated with c_allocator
+    // This handles the case where Zig functions allocate slices with c_allocator
+    // and return them. Python only owns the list object, not the original slice.
+    // We must free the original slice to avoid memory leaks.
+    //
+    // Note: This assumes the slice was allocated with c_allocator.
+    // If a slice is statically allocated or owned elsewhere, this will cause issues.
+    // For now, we assume all slices passed to toPythonList are dynamically allocated.
+    allocator.free(value);
+
     return py_list.?;
+}
+
+/// Free a value if it's a dynamically-allocated slice
+/// This is called after functions return to clean up slices allocated by fromPythonList
+/// Strings ([]const u8) are NOT freed because they're views into Python strings
+pub fn freeIfSlice(comptime T: type, value: T) void {
+    const allocator = std.heap.c_allocator;
+
+    // Only free if T is a slice type (but NOT strings)
+    const info = @typeInfo(T);
+    if (info == .pointer) {
+        const ptr_info = info.pointer;
+        if (ptr_info.size == .slice) {
+            // Don't free strings - they're views into Python objects
+            if (ptr_info.child == u8 and ptr_info.is_const) {
+                // This is a string ([]const u8) - don't free it
+                return;
+            }
+            // This is a non-string slice - free it
+            // NOTE: This assumes the slice was allocated with c_allocator
+            // If the slice is statically allocated or has a different owner, this is wrong
+            allocator.free(value);
+        }
+    }
 }
 
 // Reference counting helpers
