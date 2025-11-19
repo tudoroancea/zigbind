@@ -42,41 +42,12 @@ export fn PyInit_hellozig() callconv(.c) ?*zb.PyObject {
         .doc = "Example Zig extension module with ergonomic API",
     }) catch return null;
 
-    module.defineFunction(.{
-        .name = "hello",
-        .func = hello,
-        .doc = "Return a greeting from Zig",
-    }) catch return null;
-
-    module.defineFunction(.{
-        .name = "greet",
-        .func = greet,
-        .doc = "Echo back the name (demo of string parameter)",
-    }) catch return null;
-
-    module.defineFunction(.{
-        .name = "add",
-        .func = add,
-        .doc = "Add two integers",
-    }) catch return null;
-
-    module.defineFunction(.{
-        .name = "multiply",
-        .func = multiply,
-        .doc = "Multiply two floats",
-    }) catch return null;
-
-    module.defineFunction(.{
-        .name = "divide",
-        .func = divide,
-        .doc = "Divide two floats (returns None if divisor is zero)",
-    }) catch return null;
-
-    module.defineFunction(.{
-        .name = "is_positive",
-        .func = is_positive,
-        .doc = "Check if a number is positive",
-    }) catch return null;
+    module.def(.{ .name = "hello", .func = hello, .doc = "Return a greeting from Zig" }) catch return null;
+    module.def(.{ .name = "greet", .func = greet, .doc = "Echo back the name (demo of string parameter)" }) catch return null;
+    module.def(.{ .name = "add", .func = add, .doc = "Add two integers" }) catch return null;
+    module.def(.{ .name = "multiply", .func = multiply, .doc = "Multiply two floats" }) catch return null;
+    module.def(.{ .name = "divide", .func = divide, .doc = "Divide two floats (returns None if divisor is zero)" }) catch return null;
+    module.def(.{ .name = "is_positive", .func = is_positive, .doc = "Check if a number is positive" }) catch return null;
 
     return module.pyobject();
 }

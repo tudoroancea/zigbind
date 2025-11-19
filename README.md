@@ -34,17 +34,8 @@ export fn PyInit_mymodule() callconv(.c) ?*zb.PyObject {
         .doc = "My awesome Zig module",
     }) catch return null;
 
-    module.defineFunction(.{
-        .name = "add",
-        .func = add,
-        .doc = "Add two integers",
-    }) catch return null;
-
-    module.defineFunction(.{
-        .name = "divide",
-        .func = divide,
-        .doc = "Divide two floats (raises ValueError if divisor is zero)",
-    }) catch return null;
+    module.def(.{ .name = "add", .func = add, .doc = "Add two integers" }) catch return null;
+    module.def(.{ .name = "divide", .func = divide, .doc = "Divide two floats (raises ValueError if divisor is zero)" }) catch return null;
 
     return module.pyobject();
 }

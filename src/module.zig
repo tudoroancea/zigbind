@@ -57,7 +57,7 @@ pub const Module = struct {
 
     /// Define a Zig function as a Python callable on this module
     /// config should be an anonymous struct with fields: name, func, and optionally doc
-    pub fn defineFunction(self: *Module, comptime config: anytype) !void {
+    pub fn def(self: *Module, comptime config: anytype) !void {
         const func = config.func;
         const FuncType = @TypeOf(func);
         const type_info = @typeInfo(FuncType);
