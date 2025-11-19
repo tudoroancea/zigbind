@@ -17,13 +17,16 @@ pub const Module = struct {
     obj: *py.PyObject,
 
     /// Create a Python module with the given configuration
+    /// NOTE: The returned module owns persistent allocations (module_def, methods)
+    /// that must outlive the Python module object and are intentionally never freed.
+    /// This is standard for Python C extensions - these structures persist until process exit.
     pub fn init(config: ModuleConfig) !Module {
-        // Allocate module def (needs to be persistent)
+        // Allocate module def (needs to be persistent for module lifetime)
         var module_def = std.heap.c_allocator.create(py.PyModuleDef) catch {
             return errors.Error.MemoryError;
         };
 
-        // Allocate methods array (start with sentinel, will grow as functions are added)
+        // Allocate methods array (needs to be persistent for module lifetime)
         const methods = std.heap.c_allocator.create(py.PyMethodDef) catch {
             std.heap.c_allocator.destroy(module_def);
             return errors.Error.MemoryError;
@@ -166,7 +169,10 @@ pub const Module = struct {
             }
         };
 
-        // Allocate PyMethodDef (needs to persist)
+        // Allocate PyMethodDef (needs to persist for function lifetime)
+        // NOTE: This allocation is intentionally never freed. The PyCFunction object
+        // holds a pointer to this structure and it must remain valid for the module's lifetime.
+        // This is standard Python C extension behavior.
         const method_def = std.heap.c_allocator.create(py.PyMethodDef) catch {
             return errors.Error.MemoryError;
         };
@@ -186,17 +192,22 @@ pub const Module = struct {
         }
 
         // Add to module
+        // NOTE: PyModule_AddObject steals reference on success (returns 0)
+        // but does NOT steal on failure (returns -1)
         const result = py.PyModule_AddObject(self.obj, config.name.ptr, pyfunc.?);
         if (result < 0) {
+            py.Py_DecRef(pyfunc.?); // Must decref on failure since ref wasn't stolen
             std.heap.c_allocator.destroy(method_def);
             return errors.Error.RuntimeError;
         }
     }
 
     /// Add a Python object to this module
+    /// NOTE: Takes ownership of obj - steals reference on success, caller must Py_DECREF on failure
     pub fn addObject(self: *Module, name: [*:0]const u8, obj: *py.PyObject) !void {
         const result = py.PyModule_AddObject(self.obj, name, obj);
         if (result < 0) {
+            py.Py_DecRef(obj); // Must decref on failure since ref wasn't stolen
             return errors.Error.RuntimeError;
         }
     }
